@@ -1,0 +1,44 @@
+<html>
+
+  <head>
+    {% if title %}
+    <title>{{ title }} </title>
+    {% else %}
+    <title>Welcome!!</title>
+    {% endif %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.5.0/css/font-awesome.css" rel="stylesheet" media="screen,projection" >
+    <link href="//cdnjs.cloudflare.com/ajax/libs/materialize/0.97.5/css/materialize.css" rel="stylesheet" media="screen,projection" >
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet" media="screen,projection" >
+  </head>
+  <body>
+    <nav class="light-blue lighten-1" role="navigation">
+    <div class="nav-wrapper container">
+        <a id="logo-container" href="/" class="brand-logo">
+            Comment And Review Downloader
+        </a>
+      <ul class="right hide-on-med-and-down">
+        <li><a href="/">Home</a></li>
+
+      </ul>
+
+      <ul id="nav-mobile" class="side-nav" style="left: -250px;">
+        <li><a href="/">Home</a></li>
+
+      </ul>
+      <a href="#" data-activates="nav-mobile" class="button-collapse"><i class="material-icons">menu</i></a>
+    </div>
+  </nav>
+    <div class="container">
+          {% block content %}{% endblock %}
+      </div>
+
+
+  </body>
+  <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/materialize/0.97.5/js/materialize.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/knockout/3.4.0/knockout-min.js"></script>
+  <script src="//d3js.org/d3.v3.min.js"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</html>
