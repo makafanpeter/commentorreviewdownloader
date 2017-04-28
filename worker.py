@@ -1,3 +1,4 @@
+#worker for background job
 import os
 
 import redis

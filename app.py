@@ -170,16 +170,12 @@ class YoutubeReviewParser(ReviewParser):
                     textFormat="plainText",
                 ).execute()
                 for item in results["items"]:
-                    review_dict = {
-
-                        'review': item['snippet']['topLevelComment']['snippet']['textOriginal'],
-                        'date': dateparser.parse(item['snippet']['topLevelComment']['snippet']['publishedAt']).strftime(
-                            '%d %b %Y'),
-
-                        'star_rating': 0,
-                        'user_name': item['snippet']['topLevelComment']['snippet']['authorDisplayName'],
-                        'url': 'https://www.youtube.com/watch?v={0}&lc={1}'.format(video_id, item['id'])
-                    }
+                    snippet = item['snippet']['topLevelComment']['snippet']
+                    if snippet :
+                     review_dict = {'review': snippet.get('textOriginal', ''),
+                                   'date': dateparser.parse(snippet['publishedAt']).strftime( '%d %b %Y'), 'star_rating': 0,
+                                   'user_name': snippet.get('authorDisplayName',''),
+                                   'url': 'https://www.youtube.com/watch?v={0}&lc={1}'.format(video_id, item['id'])}
                     data.append(review_dict)
             video_information["reviews"] = data
             item = models.Item(name=video_information['name'], url=youtube_url, ref_id=video_id)
@@ -342,6 +338,6 @@ def get_youtube_id(url):
 
 
 if __name__ == '__main__':
-    app.run(threaded=True,
-            host='0.0.0.0'
-            )
+     app.run(threaded=True,
+           host='0.0.0.0'
+             )

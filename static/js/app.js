@@ -55,6 +55,7 @@ var ViewModel = function() {
 
   self.downloadCSV = function(jobId) {
     var timeout = "";
+    url = "/download/"
     var poller = function() {
       var jqxhr = $.ajax({
         type: 'GET',
@@ -69,6 +70,7 @@ var ViewModel = function() {
             self.loading(false);
             self.error(false);
             clearTimeout(timeout);
+            window.location = url + data["id"];
             return false;
           }
           timeout = setTimeout(poller, 2000);
