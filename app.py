@@ -25,7 +25,7 @@ from models import *
 def index():
     return render_template('index.html')
 
-
+#Route to pull the data
 @app.route('/crawl', methods=['POST'])
 def get_reviews():
     # get url
@@ -54,7 +54,7 @@ def get_reviews():
     # return created job id
     return job.get_id()
 
-
+#Route to check job status
 @app.route("/result/<job_key>", methods=['GET'])
 def get_result(job_key):
     job = Job.fetch(job_key, connection=conn)
@@ -67,7 +67,7 @@ def get_result(job_key):
     else:
         return "Nay!", 202
 
-
+#Route to Export the CSV
 @app.route('/download/<int:id>',methods=['get'])
 def download_csv(id):
     dest = io.StringIO()
@@ -82,6 +82,7 @@ def download_csv(id):
     output = make_response(dest.getvalue())
     output.headers["Content-Disposition"] = "attachment; filename=export.csv"
     output.headers["Content-type"] = "text/csv"
+
     return output
 
 
