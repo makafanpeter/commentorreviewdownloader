@@ -18,7 +18,7 @@ app = Flask(__name__)
 app.config.from_object(configuration.ProductionConfig)
 db = SQLAlchemy(app)
 
-task_queue = Queue(connection=conn)
+task_queue = Queue(connection=conn, default_timeout=600)
 import models
 
 
