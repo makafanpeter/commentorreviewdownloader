@@ -51,7 +51,7 @@ def get_reviews():
 
     # start job
     job = task_queue.enqueue_call(
-        func=parser.get_reviews, args=(url,), result_ttl=5000
+        func=parser.get_reviews, args=(url,), result_ttl=5000, timeout=600
     )
     # return created job id
     return job.get_id()
