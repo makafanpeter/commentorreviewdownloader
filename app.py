@@ -50,7 +50,7 @@ def get_reviews():
         parser_name = 'amazon'
     else:
         abort(400)
-    parser =  reviewparser.ReviewParser.get_parser(parser_name)
+    parser =  ReviewParser.get_parser(parser_name)
 
     # start job
     job = task_queue.enqueue_call(
