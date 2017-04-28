@@ -1,22 +1,22 @@
-from models import Review, Item
+import models
 import json, re
 from dateutil import parser as dateparser
 import requests
 from googleapiclient.discovery import build
 from lxml import html
 import csv
+import app
 
-
-#Youtube API Configuration
+# Youtube API Configuration
 YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl"
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 DEVELOPER_KEY = "AIzaSyCSo0Boq9Ym29KPqE8Fjac06sTg3c4eRhw"
-import  os
-
+import os
 
 AMAZON_ASIN = re.compile("/([a-zA-Z0-9]{10})(?:[/?]|$)")
 YOUTUBE_ID = re.compile("((?<=(v|V)/)|(?<=be/)|(?<=(\?|\&)v=)|(?<=embed/))([\w-]+)")
+
 
 class ReviewParser(object):
     parsers = None
@@ -24,7 +24,6 @@ class ReviewParser(object):
 
     def __init__(self, parser_name):
         self.parser_name = parser_name
-
 
     @classmethod
     def get_parser(cls, parser_name: object) -> object:
@@ -48,68 +47,71 @@ class YoutubeReviewParser(ReviewParser):
     def get_reviews(self, url):
         youtube_url, video_id = get_youtube_id(url)
         try:
-           video_url = 'https://www.googleapis.com/youtube/v3/videos?id={0}&key={1}&fields=items(id,snippet(channelId,title,categoryId),statistics)&part=snippet,statistics'.format(video_id, DEVELOPER_KEY)
-           headers = {
-               'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36'}
-           response = requests.get(video_url, headers=headers)
-           video_details = response.json()
-           if "items" not in video_details or len(video_details["items"]) == 0:
-               raise ValueError("Unable to Get Video Details")
-           video_information = {"ref_id": video_id,
-                                "ratings": "N/A",
-                                "name" : video_details["items"][0]["snippet"]["title"],
-                                "reviews": [],
+            video_url = 'https://www.googleapis.com/youtube/v3/videos?id={0}&key={1}&fields=items(id,snippet(channelId,title,categoryId),statistics)&part=snippet,statistics'.format(
+                video_id, DEVELOPER_KEY)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36'}
+            response = requests.get(video_url, headers=headers)
+            video_details = response.json()
+            if "items" not in video_details or len(video_details["items"]) == 0:
+                raise ValueError("Unable to Get Video Details")
+            video_information = {"ref_id": video_id,
+                                 "ratings": "N/A",
+                                 "name": video_details["items"][0]["snippet"]["title"],
+                                 "reviews": [],
                                  "url": 'https://www.youtube.com/watch?v=' + video_id,
-                                "comment_count":video_details["items"][0]["statistics"]["commentCount"]
-                                }
-           data = []
-           results = self.youtube.commentThreads().list(part="snippet",videoId=video_id,textFormat="plainText").execute()
-           for item in results["items"]:
-               review_dict = {
+                                 "comment_count": video_details["items"][0]["statistics"]["commentCount"]
+                                 }
+            data = []
+            results = self.youtube.commentThreads().list(part="snippet", videoId=video_id,
+                                                         textFormat="plainText").execute()
+            for item in results["items"]:
+                review_dict = {
 
-                   'review': item['snippet']['topLevelComment']['snippet']['textOriginal'],
-                   'date': dateparser.parse(item['snippet']['topLevelComment']['snippet']['publishedAt']).strftime('%d %b %Y'),
+                    'review': item['snippet']['topLevelComment']['snippet']['textOriginal'],
+                    'date': dateparser.parse(item['snippet']['topLevelComment']['snippet']['publishedAt']).strftime(
+                        '%d %b %Y'),
 
-                   'star_rating': "N/A",
-                   'user_name': item['snippet']['topLevelComment']['snippet']['authorDisplayName'],
-                   'url': 'https://www.youtube.com/watch?v={0}&lc={1}'.format(video_id,item['id'])
-               }
-               data.append(review_dict)
-           while "nextPageToken" in results:
-               results = self.youtube.commentThreads().list(
-                   part="snippet",
-                   videoId=video_id,
-                   pageToken=results["nextPageToken"],
-                   textFormat="plainText",
-               ).execute()
-               for item in results["items"]:
-                   review_dict = {
+                    'star_rating': "N/A",
+                    'user_name': item['snippet']['topLevelComment']['snippet']['authorDisplayName'],
+                    'url': 'https://www.youtube.com/watch?v={0}&lc={1}'.format(video_id, item['id'])
+                }
+                data.append(review_dict)
+            while "nextPageToken" in results:
+                results = self.youtube.commentThreads().list(
+                    part="snippet",
+                    videoId=video_id,
+                    pageToken=results["nextPageToken"],
+                    textFormat="plainText",
+                ).execute()
+                for item in results["items"]:
+                    review_dict = {
 
-                   'review': item['snippet']['topLevelComment']['snippet']['textOriginal'],
-                   'date': dateparser.parse(item['snippet']['topLevelComment']['snippet']['publishedAt']).strftime('%d %b %Y'),
+                        'review': item['snippet']['topLevelComment']['snippet']['textOriginal'],
+                        'date': dateparser.parse(item['snippet']['topLevelComment']['snippet']['publishedAt']).strftime(
+                            '%d %b %Y'),
 
-                   'star_rating': 0,
-                   'user_name': item['snippet']['topLevelComment']['snippet']['authorDisplayName'],
-                   'url': 'https://www.youtube.com/watch?v={0}&lc={1}'.format(video_id,item['id'])
-                   }
-                   data.append(review_dict)
-           video_information["reviews"] = data
-           item = Item(name=video_information['name'], url=youtube_url, ref_id=video_id)
-           db.session.add(item)
-           db.session.commit()
-           for comment in data:
-               review = Review(user_name=comment['user_name'], review=comment['review'], url=comment['url'],
-                               date=comment['date'], star_rating=comment['star_rating'], item_id=item.id)
-               db.session.add(review)
-           db.session.commit()
+                        'star_rating': 0,
+                        'user_name': item['snippet']['topLevelComment']['snippet']['authorDisplayName'],
+                        'url': 'https://www.youtube.com/watch?v={0}&lc={1}'.format(video_id, item['id'])
+                    }
+                    data.append(review_dict)
+            video_information["reviews"] = data
+            item = models.Item(name=video_information['name'], url=youtube_url, ref_id=video_id)
+            app.db.session.add(item)
+            app.db.session.commit()
+            for comment in data:
+                review = models.Review(user_name=comment['user_name'], review=comment['review'], url=comment['url'],
+                                       date=comment['date'], star_rating=comment['star_rating'], item_id=item.id)
+                app.db.session.add(review)
+            app.db.session.commit()
 
-           return item.id
+            return item.id
         except Exception as e:
             print(e)
             self.errors.append(e.__str__())
             return {"error": self.errors}
         return {"error": "failed to process comments", "video_id": video_id}
-
 
 
 class AmazonReviewParser(ReviewParser):
@@ -118,7 +120,7 @@ class AmazonReviewParser(ReviewParser):
 
     def get_reviews(self, url):
         try:
-            amazon_url , asin = get_amazon_asin(url)
+            amazon_url, asin = get_amazon_asin(url)
             headers = {
                 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36'}
             page = requests.get(amazon_url, headers=headers)
@@ -216,13 +218,14 @@ class AmazonReviewParser(ReviewParser):
                 'price': product_price,
                 'name': product_name
             }
-            item = Item(name= product_name, url = amazon_url , ref_id = asin  )
-            db.session.add(item)
-            db.session.commit()
+            item = models.Item(name=product_name, url=amazon_url, ref_id=asin)
+            app.db.session.add(item)
+            app.db.session.commit()
             for comment in reviews_list:
-                review = Review(user_name = comment['user_name'], review = comment['review'], url = comment['url'], date = comment['date'], star_rating = comment['star_rating'], item_id = item.id )
-                db.session.add(review)
-            db.session.commit()
+                review = models.Review(user_name=comment['user_name'], review=comment['review'], url=comment['url'],
+                                       date=comment['date'], star_rating=comment['star_rating'], item_id=item.id)
+                app.db.session.add(review)
+            app.db.session.commit()
 
             return item.id
         except Exception as e:
@@ -239,28 +242,27 @@ def get_amazon_asin(url):
     if pattern:
         asin = pattern.groups(0)[0]
         amazon_url = 'http://www.amazon.com/dp/' + asin
-        return  amazon_url,asin
-    return  None
+        return amazon_url, asin
+    return None
+
 
 def get_youtube_id(url):
     pattern = YOUTUBE_ID.search(url)
     if pattern:
         video_id = pattern.group(0)
         youtube_url = 'https://www.youtube.com/watch?v=' + video_id
-        return  youtube_url,video_id
+        return youtube_url, video_id
     return None
-
-
 
 
 if __name__ == '__main__':
     parser = ReviewParser.get_parser("youtube")
-    result   = parser.get_reviews('https://www.youtube.com/watch?v=WFF0YBKfbnk')
-    #UserName Date Star rating Review or Comment Link
-    if type(result)  is not dict:
+    result = parser.get_reviews('https://www.youtube.com/watch?v=WFF0YBKfbnk')
+    # UserName Date Star rating Review or Comment Link
+    if type(result) is not dict:
         output = 'hello.csv'
         header = ["user_name", "date", "star_rating", "review", "url"]
-        reviews = Review.query.filter_by(item_id=result).all()
+        reviews = models.Review.query.filter_by(item_id=result).all()
         with open(output, "w", encoding="utf-8") as g:
             writer = csv.DictWriter(g, delimiter=",", fieldnames=header)
             writer.writeheader()
