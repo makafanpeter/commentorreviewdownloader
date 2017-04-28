@@ -1,15 +1,15 @@
-from app import db
+from app import db as database
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
 
-class Item(db.Model):
+class Item(database.Model):
     __tablename__ = 'items'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String())
-    url = db.Column(db.String())
-    ref_id = db.Column(db.String())
-    createdOn = db.Column(db.DateTime, default=datetime.now())
+    id = database.Column(database.Integer, primary_key=True)
+    name = database.Column(database.String())
+    url = database.Column(database.String())
+    ref_id = database.Column(database.String())
+    createdOn = database.Column(database.DateTime, default=datetime.now())
 
     """docstring for Items"""
     def __init__(self, name, url, ref_id):
@@ -24,17 +24,17 @@ class Item(db.Model):
 
 
 
-class Review(db.Model):
+class Review(database.Model):
     __tablename__ = "reviews"
-    id = db.Column(db.Integer, primary_key=True)
-    user_name = db.Column(db.String)
-    review = db.Column(db.String)
-    url = db.Column(db.String)
-    item_id =  db.Column(db.Integer,db.ForeignKey('items.id'))
-    createdOn = db.Column(db.DateTime, default = datetime.now())
-    date = db.Column(db.DateTime, default=datetime.now())
+    id = database.Column(database.Integer, primary_key=True)
+    user_name = database.Column(database.String)
+    review = database.Column(database.String)
+    url = database.Column(database.String)
+    item_id =  database.Column(database.Integer, database.ForeignKey('items.id'))
+    createdOn = database.Column(database.DateTime, default = datetime.now())
+    date = database.Column(database.DateTime, default=datetime.now())
     item = relationship(Item)
-    star_rating = db.Column(db.String)
+    star_rating = database.Column(database.String)
 
 
     def __init__(self, user_name, review, url, date, star_rating, item_id  ):
