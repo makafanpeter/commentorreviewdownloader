@@ -1,10 +1,12 @@
+from models import Review, Item
 import json, re
 from dateutil import parser as dateparser
 import requests
 from googleapiclient.discovery import build
 from lxml import html
 import csv
-#from models import *
+
+
 #Youtube API Configuration
 YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl"
 YOUTUBE_API_SERVICE_NAME = "youtube"

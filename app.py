@@ -1,3 +1,4 @@
+import reviewparser
 import csv
 import re
 import io
@@ -9,7 +10,6 @@ from rq import Queue
 from rq.job import Job
 
 import configuration
-from reviewparser import ReviewParser
 from worker import conn
 
 app = Flask(__name__)
@@ -45,7 +45,7 @@ def get_reviews():
         parser_name = 'amazon'
     else:
         abort(400)
-    parser =  ReviewParser.get_parser(parser_name)
+    parser =  reviewparser.ReviewParser.get_parser(parser_name)
 
     # start job
     job = task_queue.enqueue_call(
