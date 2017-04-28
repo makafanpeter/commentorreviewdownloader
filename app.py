@@ -12,9 +12,7 @@ from lxml import html
 from rq import Queue
 from rq.job import Job
 
-import app
 import configuration
-import reviewparser
 from worker import conn
 
 app = Flask(__name__)
@@ -181,13 +179,13 @@ class YoutubeReviewParser(ReviewParser):
                     data.append(review_dict)
             video_information["reviews"] = data
             item = models.Item(name=video_information['name'], url=youtube_url, ref_id=video_id)
-            app.db.session.add(item)
-            app.db.session.commit()
+            db.session.add(item)
+            db.session.commit()
             for comment in data:
                 review = models.Review(user_name=comment['user_name'], review=comment['review'], url=comment['url'],
                                        date=comment['date'], star_rating=comment['star_rating'], item_id=item.id)
-                app.db.session.add(review)
-            app.db.session.commit()
+                db.session.add(review)
+            db.session.commit()
 
             return item.id
         except Exception as e:
@@ -302,13 +300,13 @@ class AmazonReviewParser(ReviewParser):
                 'name': product_name
             }
             item = models.Item(name=product_name, url=amazon_url, ref_id=asin)
-            app.db.session.add(item)
-            app.db.session.commit()
+            db.session.add(item)
+            db.session.commit()
             for comment in reviews_list:
                 review = models.Review(user_name=comment['user_name'], review=comment['review'], url=comment['url'],
                                        date=comment['date'], star_rating=comment['star_rating'], item_id=item.id)
-                app.db.session.add(review)
-            app.db.session.commit()
+                db.session.add(review)
+            db.session.commit()
 
             return item.id
         except Exception as e:
