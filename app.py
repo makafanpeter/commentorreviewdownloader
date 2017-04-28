@@ -2,7 +2,6 @@ import csv
 import io
 import json
 import re
-
 import requests
 from dateutil import parser as dateparser
 from flask import Flask, render_template, request, jsonify, abort, make_response
@@ -20,7 +19,6 @@ app.config.from_object(configuration.ProductionConfig)
 db = SQLAlchemy(app)
 
 task_queue = Queue(connection=conn)
-
 import models
 
 
@@ -28,7 +26,8 @@ import models
 def index():
     return render_template('index.html')
 
-#Route to pull the data
+
+# Route to pull the data
 @app.route('/crawl', methods=['POST'])
 def get_reviews():
     # get url
@@ -48,7 +47,7 @@ def get_reviews():
         parser_name = 'amazon'
     else:
         abort(400)
-    parser =  ReviewParser.get_parser(parser_name)
+    parser = ReviewParser.get_parser(parser_name)
 
     # start job
     job = task_queue.enqueue_call(
@@ -57,7 +56,8 @@ def get_reviews():
     # return created job id
     return job.get_id()
 
-#Route to check job status
+
+# Route to check job status
 @app.route("/result/<job_key>", methods=['GET'])
 def get_result(job_key):
     job = Job.fetch(job_key, connection=conn)
@@ -70,11 +70,12 @@ def get_result(job_key):
     else:
         return "Nay!", 202
 
-#Route to Export the CSV
-@app.route('/download/<int:id>',methods=['get'])
+
+# Route to Export the CSV
+@app.route('/download/<int:id>', methods=['get'])
 def download_csv(id):
     dest = io.StringIO()
-    #writer = csv.writer(dest)
+    # writer = csv.writer(dest)
     reviews = models.Review.query.filter_by(item_id=id).all()
     header = ["user_name", "date", "star_rating", "review", "url"]
     writer = csv.DictWriter(dest, delimiter=",", fieldnames=header)
@@ -88,6 +89,8 @@ def download_csv(id):
 
     return output
 
+
+# Review Parser
 # Youtube API Configuration
 YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl"
 YOUTUBE_API_SERVICE_NAME = "youtube"
@@ -119,6 +122,7 @@ class ReviewParser(object):
         pass
 
 
+# Youtube Review Parser
 class YoutubeReviewParser(ReviewParser):
     def __init__(self):
         super(YoutubeReviewParser, self).__init__('youtube')
@@ -195,6 +199,7 @@ class YoutubeReviewParser(ReviewParser):
         return {"error": "failed to process comments", "video_id": video_id}
 
 
+# Amazon Review Parser
 class AmazonReviewParser(ReviewParser):
     def __init__(self):
         super(AmazonReviewParser, self).__init__('amazon')
