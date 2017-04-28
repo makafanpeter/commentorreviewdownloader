@@ -1,3 +1,52 @@
 {% extends "base.html" %} {% block content %}
+<div class="row">
+  <div class="col s12">
+    <div class="card-panel light-blue lighten-5">
+      <p><i class="material-icons">info_outline</i>
+        <span> Only <a href="http://www.youtube.com" target="_blank">Youtube</a>, <a href="http://www.amazon.com" target="_blank">Amazon</a>  are currently supported
+        </span>
+      </p>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <form class="col s12" onsubmit="return false;">
+    <div class="row">
+      <div class="input-field col s6">
+        <input data-bind="value: url, valueUpdate: 'afterkeydown'" type="url" id="url" name="url" class="validate">
+        <label data-error="wrong" data-success="right" for="url">Enter URL</label>
+        <div class="right-align">
+          <button class="btn light-blue lighten-2" data-bind="click: crawlUrl">Submit </button>
+        </div>
+      </div>
+      {#<div class="col s6" data-bind="with: product">
+        <div class="card">
+          <div class="card-image">
+            <img data-bind="attr: { 'src': $data.imageUrl }">
+          </div>
+          <div class="card-content">
+            <p data-bind="text:'&#8358; '+ $data.price"> </p>
+          </div>
+          <div class="card-action">
+            <a data-bind="attr: { 'href': $data.url }, text:$data.name" target="_blank"></a>
+            <a class="right" title="Create Alert" data-bind="visible:! $root.productLoaded()"> <i class="material-icons" data-bind="click: $root.EnableAlert">add_alert</i></a>
+          </div>
+        </div>
+      </div>#}
+      <div class="col s6" data-bind="with:error">
+        <div class="card-panel red accent-3">
+          <p><i class="material-icons">error</i>Unable to get Item. Please make sure it's valid  url and try again.</p>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col s6" data-bind="with:loading">
+        <div class="progress">
+          <div class="indeterminate"></div>
+        </div>
+      </div>
 
+    </div>
+  </form>
+</div>
 {% endblock %}
