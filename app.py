@@ -1,15 +1,13 @@
-import reviewparser
 import csv
-import re
 import io
-
+import re
+from flask import Flask, render_template, request, jsonify, abort, make_response
 from flask.ext.sqlalchemy import SQLAlchemy
-import os
-from flask import Flask, render_template, request, jsonify, url_for, redirect, abort, make_response
 from rq import Queue
 from rq.job import Job
 
 import configuration
+import reviewparser
 from worker import conn
 
 app = Flask(__name__)
