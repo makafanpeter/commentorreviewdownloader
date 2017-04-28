@@ -16,7 +16,7 @@ db = SQLAlchemy(app)
 
 task_queue = Queue(connection=conn)
 
-from models import *
+import models
 
 
 @app.route('/')
@@ -70,7 +70,7 @@ def get_result(job_key):
 def download_csv(id):
     dest = io.StringIO()
     #writer = csv.writer(dest)
-    reviews = Review.query.filter_by(item_id=id).all()
+    reviews = models.Review.query.filter_by(item_id=id).all()
     header = ["user_name", "date", "star_rating", "review", "url"]
     writer = csv.DictWriter(dest, delimiter=",", fieldnames=header)
     writer.writeheader()
