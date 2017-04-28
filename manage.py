@@ -1,9 +1,9 @@
-from flask_script import Manager,Server
 from flask_migrate import Migrate, MigrateCommand
-import os
+from flask_script import Manager, Server
 
 import configuration
 from app import app, db
+
 app.config.from_object(configuration.ProductionConfig)
 
 migrate = Migrate(app, db)

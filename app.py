@@ -2,7 +2,7 @@ import csv
 import io
 import re
 from flask import Flask, render_template, request, jsonify, abort, make_response
-from flask.ext.sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy
 from rq import Queue
 from rq.job import Job
 
