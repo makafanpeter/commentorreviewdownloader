@@ -11,4 +11,5 @@
 
 3 *launch the worker.py using **python worker.py*** 
 
-4 *finally run the web app using **python manage.py runserver***
+4 *finally run the web app using **python manage.py runserver** and then visit http://localhost:5000 on your browser to use*
+
