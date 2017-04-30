@@ -22,7 +22,7 @@ app = Flask(__name__)
 app.config.from_object(configuration.ProductionConfig)
 db = SQLAlchemy(app)
 
-task_queue = Queue(connection=conn, default_timeout=600)
+task_queue = Queue(connection=conn, default_timeout=800)
 import models
 
 
@@ -55,7 +55,7 @@ def get_reviews():
 
     # start job
     job = task_queue.enqueue_call(
-        func=parser.get_reviews, args=(url,), result_ttl=5000, timeout=600
+        func=parser.get_reviews, args=(url,), result_ttl=5000, timeout=800
     )
     # return created job id
     return job.get_id()
