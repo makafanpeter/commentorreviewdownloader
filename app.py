@@ -237,8 +237,7 @@ class AmazonReviewParser(ReviewParser):
             XPATH_PAGER = '//*[@id="reviewSummary"]/div[1]/a/div/div/div[2]/div/span//text()'
             pager = parser.xpath(XPATH_PAGER)
             pager = ''.join(pager)
-            index = pager.index("of")
-            total_pages_str = pager[index:]
+            total_pages_str = pager
             total_pages = int(re.sub("[^0-9.]*", '', total_pages_str))
             number_of_pages = math.ceil(total_pages / 10)
             current_page = 1
@@ -348,20 +347,7 @@ def get_youtube_id(url):
 
 
 if __name__ == '__main__':
-     # app.run(threaded=True,
-     #       host='0.0.0.0'
-     #         )
-     parser = ReviewParser.get_parser("amazon")
-     result = parser.get_reviews('https://www.amazon.com/Google-Wifi-system-set-replacement/dp/B01MAW2294/ref=s9u_simh_gw_i3?_encoding=UTF8&fpl=fresh&pd_rd_i=B01MAW2294&pd_rd_r=SS8ZKFQD50GRQFVSWPX1&pd_rd_w=QQMH6&pd_rd_wg=KQYhX&pf_rd_m=ATVPDKIKX0DER&pf_rd_s=&pf_rd_r=03PTCRSH5AGZRYYGMN8C&pf_rd_t=36701&pf_rd_p=781f4767-b4d4-466b-8c26-2639359664eb&pf_rd_i=desktop')
-     # UserName Date Star rating Review or Comment Link
-     if type(result) is not dict:
-         output = 'hello.csv'
-         header = ["user_name", "date", "star_rating", "review", "url"]
-         reviews = models.Review.query.filter_by(item_id=result).all()
-         with open(output, "w", encoding="utf-8") as g:
-             writer = csv.DictWriter(g, delimiter=",", fieldnames=header)
-             writer.writeheader()
-             for row in reviews:
-                 p = row.serialize
-                 print(p)
-                 writer.writerow(p)
+      app.run(threaded=True,
+           host='0.0.0.0'
+              )
+
