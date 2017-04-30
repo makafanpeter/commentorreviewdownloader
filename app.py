@@ -2,6 +2,10 @@ import csv
 import io
 import json
 import re
+
+import math
+from time import sleep
+
 import requests
 from dateutil import parser as dateparser
 from flask import Flask, render_template, request, jsonify, abort, make_response
@@ -151,16 +155,13 @@ class YoutubeReviewParser(ReviewParser):
             results = self.youtube.commentThreads().list(part="snippet", videoId=video_id,
                                                          textFormat="plainText").execute()
             for item in results["items"]:
-                review_dict = {
-
-                    'review': item['snippet']['topLevelComment']['snippet']['textOriginal'],
-                    'date': dateparser.parse(item['snippet']['topLevelComment']['snippet']['publishedAt']).strftime(
-                        '%d %b %Y'),
-
-                    'star_rating': "N/A",
-                    'user_name': item['snippet']['topLevelComment']['snippet']['authorDisplayName'],
-                    'url': 'https://www.youtube.com/watch?v={0}&lc={1}'.format(video_id, item['id'])
-                }
+                snippet = item['snippet']['topLevelComment']['snippet']
+                if snippet:
+                    review_dict = {'review': snippet.get('textOriginal', ''),
+                                   'date': dateparser.parse(snippet['publishedAt']).strftime('%d %b %Y'),
+                                   'star_rating': 0,
+                                   'user_name': snippet.get('authorDisplayName', ''),
+                                   'url': 'https://www.youtube.com/watch?v={0}&lc={1}'.format(video_id, item['id'])}
                 data.append(review_dict)
             while "nextPageToken" in results:
                 results = self.youtube.commentThreads().list(
@@ -219,19 +220,11 @@ class AmazonReviewParser(ReviewParser):
 
             raw_product_price = parser.xpath(XPATH_PRODUCT_PRICE)
             product_price = ''.join(raw_product_price).replace(',', '')
+            ratings_dict = {}
 
             raw_product_name = parser.xpath(XPATH_PRODUCT_NAME)
             product_name = ''.join(raw_product_name).strip()
             total_ratings = parser.xpath(XPATH_AGGREGATE_RATING)
-            reviews = parser.xpath(XPATH_REVIEW_SECTION_1)
-            if not reviews:
-                reviews = parser.xpath(XPATH_REVIEW_SECTION_2)
-            ratings_dict = {}
-            reviews_list = []
-
-            if not reviews:
-                raise ValueError('unable to find reviews in page')
-
             # grabing the rating  section in product page
             for ratings in total_ratings:
                 extracted_rating = ratings.xpath('./td//a//text()')
@@ -241,65 +234,82 @@ class AmazonReviewParser(ReviewParser):
                     rating_value = raw_raing_value
                     if rating_key:
                         ratings_dict.update({rating_key: rating_value})
-            # Parsing individual reviews
-            for review in reviews:
-                XPATH_RATING = './/i[@data-hook="review-star-rating"]//text()'
-                XPATH_REVIEW_HEADER = './/a[@data-hook="review-title"]//text()'
-                XPATH_REVIEW_POSTED_DATE = './/a[contains(@href,"/profile/")]/parent::span/following-sibling::span/text()'
-                XPATH_REVIEW_TEXT_1 = './/div[@data-hook="review-collapsed"]//text()'
-                XPATH_REVIEW_TEXT_2 = './/div//span[@data-action="columnbalancing-showfullreview"]/@data-columnbalancing-showfullreview'
-                XPATH_REVIEW_COMMENTS = './/span[@data-hook="review-comment"]//text()'
-                XPATH_AUTHOR = './/a[contains(@href,"/profile/")]/parent::span//text()'
-                XPATH_REVIEW_TEXT_3 = './/div[contains(@id,"dpReviews")]/div/text()'
-                raw_review_author = review.xpath(XPATH_AUTHOR)
-                raw_review_rating = review.xpath(XPATH_RATING)
-                raw_review_header = review.xpath(XPATH_REVIEW_HEADER)
-                raw_review_posted_date = review.xpath(XPATH_REVIEW_POSTED_DATE)
-                raw_review_text1 = review.xpath(XPATH_REVIEW_TEXT_1)
-                raw_review_text2 = review.xpath(XPATH_REVIEW_TEXT_2)
-                raw_review_text3 = review.xpath(XPATH_REVIEW_TEXT_3)
-                review_id = review.attrib['id']
-                author = ' '.join(''.join(raw_review_author).split()).strip('By')
+            XPATH_PAGER = '//*[@id="reviewSummary"]/div[1]/a/div/div/div[2]/div/span//text()'
+            pager = parser.xpath(XPATH_PAGER)
+            pager = ''.join(pager)
+            index = pager.index("of")
+            total_pages_str = pager[index:]
+            total_pages = int(re.sub("[^0-9.]*", '', total_pages_str))
+            number_of_pages = math.ceil(total_pages / 10)
+            current_page = 1
+            reviews_list = []
+            while current_page <= number_of_pages:
+                REVIEW_URL = r"http://www.amazon.com/product-reviews/%s/"
+                REVIEW_URL += r"ref=cm_cr_arp_d_show_all?ie=UTF8&reviewerType=all_reviews&pageNumber=%s"
+                url = REVIEW_URL % (asin, current_page)
+                page = requests.get(url, headers=headers)
+                page_response = page.text
 
-                # cleaning data
-                review_rating = ''.join(raw_review_rating).replace('out of 5 stars', '')
-                review_header = ' '.join(' '.join(raw_review_header).split())
-                review_posted_date = dateparser.parse(''.join(raw_review_posted_date)).strftime('%d %b %Y')
-                review_text = ' '.join(' '.join(raw_review_text1).split())
+                review_parser = html.fromstring(page_response)
+                reviews = review_parser.xpath(XPATH_REVIEW_SECTION_1)
+                if not reviews:
+                    reviews = review_parser.xpath(XPATH_REVIEW_SECTION_2)
 
-                # grabbing hidden comments if present
-                if raw_review_text2:
-                    json_loaded_review_data = json.loads(raw_review_text2[0])
-                    json_loaded_review_data_text = json_loaded_review_data['rest']
-                    cleaned_json_loaded_review_data_text = re.sub('<.*?>', '', json_loaded_review_data_text)
-                    full_review_text = review_text + cleaned_json_loaded_review_data_text
-                else:
-                    full_review_text = review_text
-                if not raw_review_text1:
-                    full_review_text = ' '.join(' '.join(raw_review_text3).split())
+                if not reviews:
+                    raise ValueError('unable to find reviews in page')
 
-                raw_review_comments = review.xpath(XPATH_REVIEW_COMMENTS)
-                review_comments = ''.join(raw_review_comments)
-                review_comments = re.sub('[A-Za-z]', '', review_comments).strip()
-                review_dict = {
+                for review in reviews:
+                    XPATH_RATING = './/i[@data-hook="review-star-rating"]//text()'
+                    XPATH_REVIEW_HEADER = './/a[@data-hook="review-title"]//text()'
+                    XPATH_REVIEW_POSTED_DATE = './/a[contains(@href,"/profile/")]/parent::span/following-sibling::span/text()'
+                    XPATH_REVIEW_TEXT_1 = './/span[@data-hook="review-body"]//text()'  # './/div[@data-hook="review-collapsed"]//text()'
+                    XPATH_REVIEW_TEXT_2 = './/div//span[@data-action="columnbalancing-showfullreview"]/@data-columnbalancing-showfullreview'
+                    XPATH_REVIEW_COMMENTS = './/span[@data-hook="review-comment"]//text()'
+                    XPATH_AUTHOR = './/a[contains(@href,"/profile/")]/parent::span//text()'
+                    XPATH_REVIEW_TEXT_3 = './/div[contains(@id,"dpReviews")]/div/text()'
 
-                    'review': full_review_text,
-                    'date': review_posted_date,
+                    raw_review_author = review.xpath(XPATH_AUTHOR)
+                    raw_review_rating = review.xpath(XPATH_RATING)
+                    raw_review_header = review.xpath(XPATH_REVIEW_HEADER)
+                    raw_review_posted_date = review.xpath(XPATH_REVIEW_POSTED_DATE)
+                    raw_review_text1 = review.xpath(XPATH_REVIEW_TEXT_1)
+                    raw_review_text2 = review.xpath(XPATH_REVIEW_TEXT_2)
+                    raw_review_text3 = review.xpath(XPATH_REVIEW_TEXT_3)
 
-                    'star_rating': review_rating,
-                    'user_name': author,
-                    'url': "https://www.amazon.com/gp/customer-reviews/{0}".format(review_id)
-                }
+                    review_id = review.attrib['id']
+                    author = ' '.join(' '.join(raw_review_author).split()).strip('By')
 
-                reviews_list.append(review_dict)
+                    # cleaning data
+                    review_rating = ''.join(raw_review_rating).replace('out of 5 stars', '')
+                    review_header = ' '.join(' '.join(raw_review_header).split())
+                    review_posted_date = dateparser.parse(''.join(raw_review_posted_date)).strftime('%d %b %Y')
+                    review_text = ' '.join(' '.join(raw_review_text1).split())
 
-            data = {
-                'ratings': ratings_dict,
-                'reviews': reviews_list,
-                'url': amazon_url,
-                'price': product_price,
-                'name': product_name
-            }
+                    # grabbing hidden comments if present
+                    if raw_review_text2:
+                        json_loaded_review_data = json.loads(raw_review_text2[0])
+                        json_loaded_review_data_text = json_loaded_review_data['rest']
+                        cleaned_json_loaded_review_data_text = re.sub('<.*?>', '', json_loaded_review_data_text)
+                        full_review_text = review_text + cleaned_json_loaded_review_data_text
+                    else:
+                        full_review_text = review_text
+                    if not raw_review_text1:
+                        full_review_text = ' '.join(' '.join(raw_review_text3).split())
+
+                    raw_review_comments = review.xpath(XPATH_REVIEW_COMMENTS)
+                    review_comments = ''.join(raw_review_comments)
+                    review_comments = re.sub('[A-Za-z]', '', review_comments).strip()
+                    review_dict = {
+                        'review': full_review_text,
+                        'date': review_posted_date,
+
+                        'star_rating': review_rating,
+                        'user_name': author,
+                        'url': "https://www.amazon.com/gp/customer-reviews/{0}".format(review_id)
+                    }
+                    reviews_list.append(review_dict)
+                current_page = current_page + 1
+                sleep(3)
             item = models.Item(name=product_name, url=amazon_url, ref_id=asin)
             db.session.add(item)
             db.session.commit()
@@ -338,6 +348,20 @@ def get_youtube_id(url):
 
 
 if __name__ == '__main__':
-     app.run(threaded=True,
-           host='0.0.0.0'
-             )
+     # app.run(threaded=True,
+     #       host='0.0.0.0'
+     #         )
+     parser = ReviewParser.get_parser("amazon")
+     result = parser.get_reviews('https://www.amazon.com/Google-Wifi-system-set-replacement/dp/B01MAW2294/ref=s9u_simh_gw_i3?_encoding=UTF8&fpl=fresh&pd_rd_i=B01MAW2294&pd_rd_r=SS8ZKFQD50GRQFVSWPX1&pd_rd_w=QQMH6&pd_rd_wg=KQYhX&pf_rd_m=ATVPDKIKX0DER&pf_rd_s=&pf_rd_r=03PTCRSH5AGZRYYGMN8C&pf_rd_t=36701&pf_rd_p=781f4767-b4d4-466b-8c26-2639359664eb&pf_rd_i=desktop')
+     # UserName Date Star rating Review or Comment Link
+     if type(result) is not dict:
+         output = 'hello.csv'
+         header = ["user_name", "date", "star_rating", "review", "url"]
+         reviews = models.Review.query.filter_by(item_id=result).all()
+         with open(output, "w", encoding="utf-8") as g:
+             writer = csv.DictWriter(g, delimiter=",", fieldnames=header)
+             writer.writeheader()
+             for row in reviews:
+                 p = row.serialize
+                 print(p)
+                 writer.writerow(p)
