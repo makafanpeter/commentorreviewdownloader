@@ -1,0 +1,23 @@
+{% extends "base.html" %} {% block content %}
+
+    <table class="responsive-table">
+              <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Date</th>
+                    <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+              {% for item in items %}
+                   <tr>
+                  <td>{{ item.name }}</td>
+                  <td>{{ item.createdOn.strftime('%d-%m-%Y') }}</td>
+                  <td><a class="waves-effect waves-light btn" href="{{ url_for("download_csv", id=item.id) }}"><i class="material-icons">file_download</i></a> </td>
+                </tr>
+              {% endfor %}
+
+
+              </tbody>
+            </table>
+{% endblock %}

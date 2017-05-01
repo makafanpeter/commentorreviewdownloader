@@ -93,6 +93,11 @@ def download_csv(id):
 
     return output
 
+# Route to list all downloads
+@app.route('/downloads', methods=['get'])
+def downloads():
+    items =  models.Item.query.all()
+    return render_template('download.html', items= items)
 
 # Review Parser
 # Youtube API Configuration
