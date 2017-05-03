@@ -104,7 +104,7 @@ def downloads():
 YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl"
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
-DEVELOPER_KEY = "AIzaSyCSo0Boq9Ym29KPqE8Fjac06sTg3c4eRhw"
+DEVELOPER_KEY = configuration.Config.DEVELOPER_KEY
 import os
 
 AMAZON_ASIN = re.compile("/([a-zA-Z0-9]{10})(?:[/?]|$)")
